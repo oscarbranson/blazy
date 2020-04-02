@@ -7,7 +7,7 @@ import re
 import platform
 import pandas as pd
 import pkg_resources as pkgrs
-from .parser import database
+from . import parser
 
 import phreeqpy.iphreeqc.phreeqc_dll as phreeqc_mod
 
@@ -43,42 +43,52 @@ def make_solution(inputs, n=1):
 
 # def make_default_output(database, inputs):
 
-def input_str(inputs, outputs=None):
-    """
-    Generate an input for calculating PHREEQC solutions.
+# def input_str(inputs, outputs=None, database='pitzer'):
+#     """
+#     Generate an input for calculating PHREEQC solutions.
 
-    Parameters
-    ----------
-    inputs : dict, or list of dicts
-        Where each key is a valid PHREEQC input key, and each 
-        value is its value.
+#     Parameters
+#     ----------
+#     inputs : dict, or list of dicts
+#         Where each key is a valid PHREEQC input key, and each 
+#         value is its value.
         
-        If a dict of dicts, multiple solutions are specified for 
-        calculation with the names of the input dicts.
+#         If a dict of dicts, multiple solutions are specified for 
+#         calculation with the names of the input dicts.
+#     outputs : array-like or string
+#         A full output string or a list of output lines.
+#     database : str
+#         Which database the input_string is for. Required for input
+#         checking and automatic output generation.
+#     """
+#     # database parser
+#     db = parser.database(database)
     
-    outputs : array-like or string
-        A full output string or a list of output lines.
-    """
-    # inputs
-    if isinstance(inputs, dict):
-        inputs = [inputs]
-    solutions = []
-    for n, v in enumerate(inputs):
-        solutions.append(make_solution(v, n))
+#     # inputs
+#     if isinstance(inputs, dict):
+#         inputs = [inputs]
+    
+#     targets = set()
+#     solutions = []
+#     for n, v in enumerate(inputs):
+#         v = db.check_input_dict(v)
+#         targets.update(db.get_target_elements(v))
+#         solutions.append(make_solution(v, n))
 
-    # outputs
-    output = []
-    if outputs is None:
-        # if not specified, use default (defined at top ^)
-        output.append(default_output)
-    elif isinstance(outputs, str):
-        # if it's a string
-        output.append(outputs)
-    else:
-        # if it's a list
-        output += outputs
+#     targets = targets.difference({'H', 'O'})  # get rid of OH ions
+#     # outputs
+#     output = []
+#     if outputs is None:
+#         # if not specified, generate an output
+#         output.append(db.generate_SELECTED_OUTPUT(targets))
+#     elif isinstance(outputs, str):
+#         # if it's a string
+#         output.append(outputs)
+#     else:
+#         # if it's a list
+#         output += outputs
     
-    return '\n'.join(solutions) + '\n' + '\n'.join(output) + '\nEND'
+#     return '\n'.join(solutions) + '\n' + '\n'.join(output) + '\nEND'
 
 def phreeqfind():
     """

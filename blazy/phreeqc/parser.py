@@ -10,6 +10,7 @@ import pkg_resources as pkgrs
 
 from ..helpers import issubset
 from ..chemistry import get_elements
+from .io import make_solution
 
 class database:
     def __init__(self, database):
@@ -235,7 +236,7 @@ class database:
 
         Returns
         -------
-        list : calculated species in the database containing the target elements.
+        set : calculated species in the database containing the target elements.
         """
         solution_species = self.get_species(targets, 'SOLUTION_SPECIES')
         targets = self._targets_handler(targets=targets)
@@ -345,7 +346,7 @@ class database:
                     kn = self.master_nocharge_2_element[k]
                 else:
                     raise ValueError(f"{k} is not a valid element or species name for the {self.name} database.")
-                msg = f"{k} is not a valid input for the {self.name} database, but {kn} is. We've swapped {k} for {kn}."
+                msg = f"{k} is not a valid input for the {self.name} database, but {kn} is. We've swapped {k} for {kn} in the input file."
                 warnings.warn(msg)
                 if kn is not None:
                     input_dict.pop(k)
@@ -419,7 +420,7 @@ class database:
             outstr.append('    -totals ' + ' '.join(targets))
         
         if molalities or activities:
-            species = self.get_SOLUTION_SPECIES(targets)
+            species = self.get_SOLUTION_SPECIES(targets).union(['H+', 'OH-'])
         
         if molalities:
             outstr.append('    -m ' + ' '.join(species))
@@ -432,3 +433,41 @@ class database:
             outstr.append('    -si ' + ' '.join(phases))
         
         return '\n'.join(outstr)
+
+    def make_PHREEQC_input(self, inputs, output_totals=True, output_molalities=True, output_activities=True, output_phases=True, phase_targets=None, allow_HCO=True):
+        """
+        Generate an input for calculating PHREEQC solutions.
+
+        Parameters
+        ----------
+        inputs : dict, or list of dicts
+            Where each key is a valid PHREEQC input key, and each 
+            value is its value.
+            
+            If a dict of dicts, multiple solutions are specified for 
+            calculation with the names of the input dicts.
+        outputs : array-like or string
+            A full output string or a list of output lines.
+        database : str
+            Which database the input_string is for. Required for input
+            checking and automatic output generation.
+        """
+        # inputs
+        if isinstance(inputs, dict):
+            inputs = [inputs]
+        
+        targets = set()
+        solutions = []
+        for n, v in enumerate(inputs):
+            v = self.check_input_dict(v)
+            targets.update(self.get_target_elements(v))
+            solutions.append(make_solution(v, n))
+        targets = targets.difference({'H', 'O'})  # get rid of OH ions
+
+        # outputs
+        output = []
+        output = self.generate_SELECTED_OUTPUT(targets, totals=output_totals, molalities=output_molalities, activities=output_activities, phases=output_phases, phase_targets=phase_targets, allow_HCO=allow_HCO)
+        
+        self.input_str = '\n'.join(solutions) + '\n' + output + '\nEND'
+    
+        return self.input_str
