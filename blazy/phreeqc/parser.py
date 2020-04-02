@@ -41,7 +41,12 @@ class database:
             return pkgrs.resource_filename('blazy', os.path.join('resources','database', database + '.dat'))
         
         raise ValueError(f"The database '{database}' does not exist. Please provide a complete path to a PHREEQC database, or use one of: [{', '.join(dbase_names)}]")
-        
+    
+    def _targets_handler(self, targets):
+        if isinstance(targets, str):
+            targets = [targets]
+        return set(targets)
+
     def load(self, database, keep_comments=False):
         with open(database, 'r', errors='replace') as f:
             db = [line.rstrip() for line in f]
@@ -76,7 +81,7 @@ class database:
         
         """
         sides = reac.split('=')
-        return [[c for c in side.split(' ') if c != '+'] for side in sides]
+        return [[c for c in side.split(' ') if c not in ['+', '']] for side in sides]
 
     def get_section(self, section, remove_comments=True):
         if section not in self.sections:
@@ -92,37 +97,42 @@ class database:
 
     def get_species(self, targets, section='SOLUTION_SPECIES', remove_comments=True):
         
-        if isinstance(targets, str):
-            targets = [targets]
+        targets = self._targets_handler(targets=targets)
         
-        active_lines = {}
+        active_lines = set()
         for t in targets:
-            active_lines[t] = []
             for line in self.get_section(section=section, remove_comments=remove_comments):
                 if t in line:
-                    active_lines[t].append(line)
+                    active_lines.add(line)
                 
         return active_lines
     
-    def get_SOLUTION_SPECIES(self, targets):
+    def get_SOLUTION_SPECIES(self, targets, allow_HCO=True):
         solution_species = self.get_species(targets, 'SOLUTION_SPECIES')
-        
+        targets = self._targets_handler(targets=targets)
+        if allow_HCO:
+            ftargets = targets.union(['H', 'C', 'O'])
+        else:
+            ftargets = targets
+
         out_species = set()
-        for t, species in solution_species.items():
-            for s in species:
-                _, prod = self._reacsplit(s)  # only look at reaction products
-                for p in prod:
-                    if t in p:  # if target is in product
-                        out_species.add(p)
+        for s in solution_species:
+            _, prod = self._reacsplit(s)  # only look at reaction products
+            for p in prod:
+                pels = get_elements(p)
+                if issubset(pels, ftargets) and pels.intersection(targets):
+                    out_species.add(p)
         
-        return(out_species)
+        return out_species
     
     def get_SOLUTION_MASTER_SPECIES(self, targets):
         solution_species = self.get_species(targets, 'SOLUTION_MASTER_SPECIES')
-        
+        targets = self._targets_handler(targets)
+
         out_species = set()
-        for t, species in solution_species.items():
-            for s in species:
+        for s in solution_species:
+            pels = get_elements(s.split()[0])
+            if issubset(pels, targets):
                 out_species.add(s.split()[0])
         
         return out_species
@@ -143,9 +153,8 @@ class database:
         if not hasattr(self, 'phases'):
             self.parse_PHASES()
 
-        if isinstance(targets, str):
-            targets = [targets]
-        
+        targets = self._targets_handler(targets)
+
         possible_phases = set()
         for p, i in self.phases.items():
             for t in targets:
@@ -154,16 +163,19 @@ class database:
                     possible_phases.add((p, phase_formula))
         
         if allow_HCO:
-            targets += ['H', 'C', 'O']
+            ftargets = targets.union(['H', 'C', 'O'])
         out_phases = set()
         
         for p, f in possible_phases:
-            if issubset(get_elements(f), targets):
+            if issubset(get_elements(f), ftargets):
                 out_phases.add(p)
         
         return out_phases
 
-    def generate_SELECTED_OUTPUT(self, targets, totals=True, molalities=True, activities=True, phases=True, allow_HCO=True):
+    def generate_SELECTED_OUTPUT(self, targets, totals=True, molalities=True, activities=True, phases=True, phase_targets=None, allow_HCO=True):
+        if phase_targets is None:
+            phase_targets = targets
+
         outstr = [
             'SELECTED_OUTPUT', 
             '    -pH',
@@ -185,7 +197,7 @@ class database:
             outstr.append('    -a ' + ' '.join(species))
         
         if phases:
-            phases = self.get_PHASES(targets, allow_HCO=allow_HCO)
+            phases = self.get_PHASES(phase_targets, allow_HCO=allow_HCO)
             outstr.append('    -si ' + ' '.join(phases))
         
         return '\n'.join(outstr)
