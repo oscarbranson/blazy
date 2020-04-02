@@ -32,6 +32,14 @@ class database:
 
         self.get_SOLUTION_MASTER_SPECIES()
 
+        self._exempt_inputs = [
+            'temperature', 'temp', 
+            'pressure', 'press',
+            'pH', 'pe', 
+            'redox'
+            'density', 'unit'
+        ]
+
     def _database_path_handler(self, database):
         """
         Convenience function for checking/getting the path to the database.
@@ -322,16 +330,8 @@ class database:
         -------
         dict : a checked input dict with any required modification.
         """
-        
-        exempt = [
-            'temperature', 'temp', 
-            'pressure', 'press',
-            'pH', 'pe', 
-            'redox'
-            'density', 'unit'
-        ]
         for k, v in input_dict.items():
-            if k in exempt:
+            if k in self._exempt_inputs:
                 # these are generic options that won't be in the database
                 continue
             if k[0] == '-':
@@ -352,6 +352,29 @@ class database:
                     input_dict[kn] = v
         
         return input_dict
+
+    def get_target_elements(self, input_dict):
+        """
+        Gets a list of all elements in the input file.
+
+        Parameters
+        ----------
+        input_dict : dict
+            A dictionary used to create an input string, consisting of
+            {element_name: value}.
+        
+        Returns
+        -------
+        set : containing names of all elements in the input
+        """
+        input_dict = self.check_input_dict(input_dict)
+        targets = set()
+        for k, v in input_dict.items():
+            if k in self._exempt_inputs:
+                continue
+            targets.update(get_elements(self.element_2_master_nocharge[k]))
+        
+        return targets
 
 
     def generate_SELECTED_OUTPUT(self, targets, totals=True, molalities=True, activities=True, phases=True, phase_targets=None, allow_HCO=True):
