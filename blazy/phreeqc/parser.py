@@ -12,7 +12,7 @@ from ..helpers import issubset
 from ..chemistry import get_elements
 from .io import make_solution
 
-class database:
+class datParser:
     def __init__(self, database):
         """
         Class for loading and parsing PHREEQC databases.
@@ -317,7 +317,7 @@ class database:
         
         return out_phases
 
-    def check_input_dict(self, input_dict):
+    def check_input_dict(self, input_dict, remove_failures=True):
         """
         Checks the validity of an input dictionary, replacing names where necessary.
 
@@ -331,6 +331,10 @@ class database:
         -------
         dict : a checked input dict with any required modification.
         """
+        remove = []
+        add = {}
+        msg_subs = []
+        msg_rems = []
         for k, v in input_dict.items():
             if k in self._exempt_inputs:
                 # these are generic options that won't be in the database
@@ -339,18 +343,35 @@ class database:
                 # there are a lot of abbreviated options that start with a dash
                 continue
             if k not in self.element_2_master:
-                kn = None
                 if k in self.master_2_element:
                     kn = self.master_2_element[k]
+                    add[kn] = v
+                    remove.append(k)
+                    msg_subs.append(f"   - {k} --> {kn}")
                 elif k in self.master_nocharge_2_element:
                     kn = self.master_nocharge_2_element[k]
+                    add[kn] = v
+                    remove.append(k)
+                    msg_subs.append(f"   - {k} --> {kn}")
+                elif remove_failures:
+                    remove.append(k)
+                    msg_rems.append(f"   - {k}")
                 else:
                     raise ValueError(f"{k} is not a valid element or species name for the {self.name} database.")
-                msg = f"{k} is not a valid input for the {self.name} database, but {kn} is. We've swapped {k} for {kn} in the input file."
-                warnings.warn(msg)
-                if kn is not None:
-                    input_dict.pop(k)
-                    input_dict[kn] = v
+        
+        if len(msg_rems + msg_subs) > 0:
+            msg = f"\n\nThere were a few items in your inputs which aren't valid in the {self.name} database."
+            if len(msg_subs) > 0:
+                msg += f"\nInvalid items which we were able to substitute:\n" + '\n'.join(msg_subs)
+            if len(msg_subs) > 0:
+                msg += f"\nInvalid items which we have removed:\n" + '\n'.join(msg_rems)
+            msg += "\nPlease make sure these substitions make sense!"
+
+            warnings.warn(msg)
+
+        for r in remove:
+            input_dict.pop(r)
+        input_dict.update(add)
         
         return input_dict
 
