@@ -5,6 +5,7 @@ Functions for parsing iPHREEQC databases.
 import re
 import os
 import warnings
+import pandas as pd
 from glob import glob
 import pkg_resources as pkgrs
 
@@ -37,7 +38,7 @@ class datParser:
             'temperature', 'temp', 
             'pressure', 'press',
             'pH', 'pe', 
-            'redox'
+            'redox',
             'density', 'unit'
         ]
 
@@ -317,7 +318,7 @@ class datParser:
         
         return out_phases
 
-    def check_input_dict(self, input_dict, remove_failures=True):
+    def check_inputs(self, inputs, remove_failures=True):
         """
         Checks the validity of an input dictionary, replacing names where necessary.
 
@@ -331,30 +332,35 @@ class datParser:
         -------
         dict : a checked input dict with any required modification.
         """
-        remove = []
-        add = {}
+        if isinstance(inputs, dict):
+            inputs = pd.DataFrame(inputs, index=[0])
+
+        retain = []
+        final_names = []
         msg_subs = []
         msg_rems = []
-        for k, v in input_dict.items():
-            if k in self._exempt_inputs:
+        for k in inputs.columns:
+            if k in self._exempt_inputs or (k[0] == '-'):
                 # these are generic options that won't be in the database
-                continue
-            if k[0] == '-':
                 # there are a lot of abbreviated options that start with a dash
+                retain.append(k)
+                final_names.append(k)
                 continue
-            if k not in self.element_2_master:
+            if k in self.element_2_master:
+                retain.append(k)
+                final_names.append(k)
+            else:
                 if k in self.master_2_element:
+                    retain.append(k)
                     kn = self.master_2_element[k]
-                    add[kn] = v
-                    remove.append(k)
+                    final_names.append(kn)
                     msg_subs.append(f"   - {k} --> {kn}")
                 elif k in self.master_nocharge_2_element:
+                    retain.append(k)
                     kn = self.master_nocharge_2_element[k]
-                    add[kn] = v
-                    remove.append(k)
+                    final_names.append(kn)
                     msg_subs.append(f"   - {k} --> {kn}")
                 elif remove_failures:
-                    remove.append(k)
                     msg_rems.append(f"   - {k}")
                 else:
                     raise ValueError(f"{k} is not a valid element or species name for the {self.name} database.")
@@ -369,13 +375,12 @@ class datParser:
 
             warnings.warn(msg)
 
-        for r in remove:
-            input_dict.pop(r)
-        input_dict.update(add)
+        inputs = inputs.loc[:, retain]
+        inputs.columns = final_names
         
-        return input_dict
+        return inputs
 
-    def get_target_elements(self, input_dict):
+    def get_target_elements(self, inputs):
         """
         Gets a list of all elements in the input file.
 
@@ -389,10 +394,9 @@ class datParser:
         -------
         set : containing names of all elements in the input
         """
-        input_dict = self.check_input_dict(input_dict)
         targets = set()
-        for k, v in input_dict.items():
-            if k in self._exempt_inputs:
+        for k in inputs.columns:
+            if k in self._exempt_inputs or (k[0] == '-'):
                 continue
             targets.update(get_elements(self.element_2_master_nocharge[k]))
         
@@ -473,15 +477,11 @@ class datParser:
             Which database the input_string is for. Required for input
             checking and automatic output generation.
         """
-        # inputs
-        if isinstance(inputs, dict):
-            inputs = [inputs]
-        
-        targets = set()
+        inputs = self.check_inputs(inputs)
+        targets = self.get_target_elements(inputs)
+
         solutions = []
-        for n, v in enumerate(inputs):
-            v = self.check_input_dict(v)
-            targets.update(self.get_target_elements(v))
+        for n, v in inputs.iterrows():
             solutions.append(make_solution(v, n))
         targets = targets.difference({'H', 'O'})  # get rid of OH ions
 
