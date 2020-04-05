@@ -145,6 +145,7 @@ def run_phreeqc(input_string, database=None, phreeq_path=None, output_file=False
         phreeqc.set_output_file_on()
     phreeqc.run_string(input_string)
     out = phreeqc.get_selected_output_array()
+    phreeqc.destroy_iphreeqc()
     if parse_output:
         return output_parser(out)
     else:
