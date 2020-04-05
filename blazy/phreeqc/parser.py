@@ -318,7 +318,7 @@ class datParser:
         
         return out_phases
 
-    def check_inputs(self, inputs, remove_failures=True):
+    def check_inputs(self, inputs, remove_failures=True, uncertainty_id='_std'):
         """
         Checks the validity of an input dictionary, replacing names where necessary.
 
@@ -339,48 +339,51 @@ class datParser:
         final_names = []
         msg_subs = []
         msg_rems = []
+        changed = False
         for k in inputs.columns:
-            if k in self._exempt_inputs or (k[0] == '-'):
+            k0 = k
+            if uncertainty_id in k:
+                k = k.replace(uncertainty_id, '')
+            if k in self._exempt_inputs or (k[0] == '-') or k in self.element_2_master:
                 # these are generic options that won't be in the database
                 # there are a lot of abbreviated options that start with a dash
-                retain.append(k)
-                final_names.append(k)
-                continue
-            if k in self.element_2_master:
-                retain.append(k)
-                final_names.append(k)
+                retain.append(k0)
+                final_names.append(k0)
             else:
                 if k in self.master_2_element:
-                    retain.append(k)
-                    kn = self.master_2_element[k]
+                    retain.append(k0)
+                    kn = k0.replace(k, self.master_2_element[k])
                     final_names.append(kn)
-                    msg_subs.append(f"   - {k} --> {kn}")
+                    msg_subs.append(f"   - {k0} --> {kn}")
+                    changed = True
                 elif k in self.master_nocharge_2_element:
-                    retain.append(k)
-                    kn = self.master_nocharge_2_element[k]
+                    retain.append(k0)
+                    kn = k0.replace(k, self.master_nocharge_2_element[k])
                     final_names.append(kn)
-                    msg_subs.append(f"   - {k} --> {kn}")
+                    msg_subs.append(f"   - {k0} --> {kn}")
+                    changed = True
                 elif remove_failures:
-                    msg_rems.append(f"   - {k}")
+                    msg_rems.append(f"   - {k0}")
+                    changed = True
                 else:
                     raise ValueError(f"{k} is not a valid element or species name for the {self.name} database.")
-        
-        if len(msg_rems + msg_subs) > 0:
-            msg = f"\n\nThere were a few items in your inputs which aren't valid in the {self.name} database."
-            if len(msg_subs) > 0:
-                msg += f"\nInvalid items which we were able to substitute:\n" + '\n'.join(msg_subs)
-            if len(msg_subs) > 0:
-                msg += f"\nInvalid items which we have removed:\n" + '\n'.join(msg_rems)
-            msg += "\nPlease make sure these substitions make sense!"
+        if changed:
+            if len(msg_rems + msg_subs) > 0:
+                msg = f"\n\nThere were a few items in your inputs which aren't valid in the {self.name} database."
+                if len(msg_subs) > 0:
+                    msg += f"\nInvalid items which we were able to substitute:\n" + '\n'.join(msg_subs)
+                if len(msg_rems) > 0:
+                    msg += f"\nInvalid items which we have removed:\n" + '\n'.join(msg_rems)
+                msg += "\nPlease make sure these substitions make sense!"
 
-            warnings.warn(msg)
+                warnings.warn(msg)
 
-        inputs = inputs.loc[:, retain]
-        inputs.columns = final_names
-        
+            inputs = inputs.loc[:, retain]
+            inputs.columns = final_names
+
         return inputs
 
-    def get_target_elements(self, inputs):
+    def get_target_elements(self, inputs, drop_OH=True, uncertainty_id='_std'):
         """
         Gets a list of all elements in the input file.
 
@@ -394,12 +397,16 @@ class datParser:
         -------
         set : containing names of all elements in the input
         """
+        inputs = self.check_inputs(inputs)
+
         targets = set()
         for k in inputs.columns:
-            if k in self._exempt_inputs or (k[0] == '-'):
+            if k in self._exempt_inputs or (k[0] == '-') or uncertainty_id in k:
                 continue
             targets.update(get_elements(self.element_2_master_nocharge[k]))
-        
+        if drop_OH:
+            targets = targets.difference({'H', 'O'})  # get rid of OH ions
+
         return targets
 
 
@@ -458,8 +465,16 @@ class datParser:
             outstr.append('    -si ' + ' '.join(phases))
         
         return '\n'.join(outstr)
+    
+    def generate_SOLUTIONS(self, inputs):
+        inputs = self.check_inputs(inputs)
 
-    def make_PHREEQC_input(self, inputs, output_totals=True, output_molalities=True, output_activities=True, output_phases=True, phase_targets=None, allow_HCO=True):
+        solutions = []
+        for n, v in inputs.iterrows():
+            solutions.append(make_solution(v, n))
+        return '\n'.join(solutions)
+
+    def make_PHREEQC_input(self, inputs, output_totals=True, output_molalities=True, output_activities=True, output_phases=True, phase_targets=None, allow_HCO_phases=True, drop_OH_species=True, uncertainty_id='_std'):
         """
         Generate an input for calculating PHREEQC solutions.
 
@@ -478,17 +493,15 @@ class datParser:
             checking and automatic output generation.
         """
         inputs = self.check_inputs(inputs)
-        targets = self.get_target_elements(inputs)
+        
+        targets = self.get_target_elements(inputs, drop_OH=drop_OH_species, uncertainty_id=uncertainty_id)
 
-        solutions = []
-        for n, v in inputs.iterrows():
-            solutions.append(make_solution(v, n))
-        targets = targets.difference({'H', 'O'})  # get rid of OH ions
+        # inputs
+        solutions = self.generate_SOLUTIONS(inputs)
 
         # outputs
-        output = []
-        output = self.generate_SELECTED_OUTPUT(targets, totals=output_totals, molalities=output_molalities, activities=output_activities, phases=output_phases, phase_targets=phase_targets, allow_HCO=allow_HCO)
+        output = self.generate_SELECTED_OUTPUT(targets, totals=output_totals, molalities=output_molalities, activities=output_activities, phases=output_phases, phase_targets=phase_targets, allow_HCO=allow_HCO_phases)
         
-        self.input_str = '\n'.join(solutions) + '\n' + output + '\nEND'
+        self.input_str = solutions + '\n' + output + '\nEND'
     
         return self.input_str
