@@ -4,6 +4,7 @@ Monte-Carlo uncertainties in phreeqc solution chemistry.
 
 # from .phreeq import input_str, run_phreeqc
 # import uncertainties as un
+import numpy as np
 import pandas as pd
 from scipy import stats
 import multiprocessing as mp
@@ -22,14 +23,20 @@ def mc_input_dfs(df, N=1000, uncertainty_id='_std', distribution=None, outputs=N
     col_no_unc = [c for c in cols if c + uncertainty_id not in uncs]  # all columns without uncertainties
     col_with_unc = [c for c in cols if c not in col_no_unc]
 
+    if not col_with_unc:
+        raise ValueError(f"None of your columns contain uncertainties (have '{uncertainty_id}' in the name).")
+
     for i, r in df.iterrows():
         out = pd.DataFrame(columns=cols, index=range(N))
 
         for c in col_no_unc:
             out.loc[:, c] = r.loc[c]
         for c in col_with_unc:
-            out.loc[:, c] = distribution(r.loc[c], r.loc[c + uncertainty_id]).rvs(N)
-                
+            if all(~np.isnan([r.loc[c], r.loc[c + uncertainty_id]])):
+                out.loc[:, c] = distribution(r.loc[c], r.loc[c + uncertainty_id]).rvs(N)
+            else:
+                out.loc[:, c] = r.loc[c]
+
         yield out, outputs, db
 
 def concat_mc_results(mc_dfs):
