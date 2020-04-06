@@ -37,6 +37,6 @@ setup(name='blazy',
                         ],
       package_data={
         'latools': ['resources/*',
-                    'resources/test_data/*'],
+                    'resources/database/*'],
       },
       zip_safe=True)
