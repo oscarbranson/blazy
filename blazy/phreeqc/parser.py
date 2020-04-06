@@ -10,10 +10,63 @@ from glob import glob
 import pkg_resources as pkgrs
 
 from ..helpers import issubset
-from ..chemistry import get_elements
+from ..chemistry import get_elements, valid_elements
 from .io import make_solution
 
+def reacsplit(reac):
+    """
+    Splits a reaction into its components.
+    
+    For example:
+    reacsplit('Ca+2 + B(OH)3 + H2O = CaB(OH)4+ + H+')
+    > [['Ca+2', 'B(OH)3', 'H2O'], ['CaB(OH)4+', 'H+']]
+    
+    list of reactants in the first item, list of products in the second
+    
+    Parameters
+    ----------
+    reac : str
+        The reaction to be separated, in phreeqc notation.
+
+    Returns
+    -------
+    list : containing [[left, hand, side], [right, hand, side]]
+    """
+    sides = reac.split('=')
+    return [[c for c in side.split(' ') if c not in ['+', '']] for side in sides]
+
+def remove_stoich(species):
+    """
+    Removes stoichiometric multipler from the start of a species name.
+
+    For example:
+    2B(OH)3  ->  B(OH)3
+
+    Parameters
+    ----------
+    species : str
+        The species to be treated
+    
+    Returns
+    -------
+    str : the input species with stoichiometric multiplier removed.
+    """
+    srm = re.compile('^[0-9]+')
+    return srm.sub('', species)
+
+
 class datParser:
+    """
+    Class for loading and parsing PHREEQC databases.
+
+    Particularly useful for identifying outputs that are
+    relevant to your solution constituents.
+
+    Parameters
+    ----------
+    database : path
+        Name of database or path to phreeqc database.
+    """
     def __init__(self, database):
         """
         Class for loading and parsing PHREEQC databases.
@@ -57,6 +110,8 @@ class datParser:
         """
         if os.path.exists(database):
             return database
+        else:
+            database = database.replace('.dat', '')
         
         dbase_path = pkgrs.resource_filename('blazy', os.path.join('resources','database'))
         valid_dbases = glob(os.path.join(dbase_path, '*.dat'))
@@ -71,6 +126,8 @@ class datParser:
         """
         Convenience function for checking the format of 'targets'
         """
+        if targets is None:
+            return targets
         if isinstance(targets, str):
             targets = [targets]
         return set(targets)
@@ -122,29 +179,6 @@ class datParser:
                 headlast = line.strip()
                 ilast = i        
         return headind
-    
-    @staticmethod
-    def _reacsplit(reac):
-        """
-        Splits a reaction into its components.
-        
-        For example:
-        self._reacsplit('Ca+2 + B(OH)3 + H2O = CaB(OH)4+ + H+')
-        > [['Ca+2', 'B(OH)3', 'H2O'], ['CaB(OH)4+', 'H+']]
-        
-        list of reactants in the first item, list of products in the second
-        
-        Parameters
-        ----------
-        reac : str
-            The reaction to be separated, in phreeqc notation.
-
-        Returns
-        -------
-        list : containing [[left, hand, side], [right, hand, side]]
-        """
-        sides = reac.split('=')
-        return [[c for c in side.split(' ') if c not in ['+', '']] for side in sides]
 
     def get_section(self, section, remove_comments=True):
         """
@@ -170,32 +204,67 @@ class datParser:
                 yield self.db[i].split('#')[0]
             else:
                 yield self.db[i]
-
-    def get_species(self, targets, section='SOLUTION_SPECIES', remove_comments=True):
+    
+    def parse_SOLUTION_SPECIES(self, remove_comments=True):
         """
-        Returns all species that containing the elements in 'target'.
-
+        Turns tabbed database entries into a dict of {entry: [lines]}.
+        
+        Each entry is a title, followed by a number of tab-inset lines that
+        are associated with that entry.
+        
         Parameters
         ----------
-        targets : str or array-like
         section : str
+            The name of the section in the database, for example 'SOLUTION_SPECIES'.
         remove_comments : bool
+            If True, in-line comments (anything preceeding '#') are removed.
 
         Returns
         -------
-        set : all of the lines that contain the target elements.
-
+        dict : containing each entry in the section and the lines it contains.
+        
         """
+        section = 'SOLUTION_SPECIES'
+        out = {}
+        entry = None
+        for p in self.get_section(section=section, remove_comments=remove_comments):
+            if '=' in p:
+                entry = p.lstrip()
+                out[entry] = []
+            else:
+                out[entry].append(p.lstrip())
         
-        targets = self._targets_handler(targets=targets)
+        return out
+
+    # def parse_entries(self, section='SOLUTION_SPECIES', remove_comments=True):
+    #     """
+    #     Turns tabbed database entries into a dict of {entry: [lines]}.
         
-        active_lines = set()
-        for t in targets:
-            for line in self.get_section(section=section, remove_comments=remove_comments):
-                if t in line:
-                    active_lines.add(line)
-                
-        return active_lines
+    #     Each entry is a title, followed by a number of tab-inset lines that
+    #     are associated with that entry.
+        
+    #     Parameters
+    #     ----------
+    #     section : str
+    #         The name of the section in the database, for example 'SOLUTION_SPECIES'.
+    #     remove_comments : bool
+    #         If True, in-line comments (anything preceeding '#') are removed.
+
+    #     Returns
+    #     -------
+    #     dict : containing each entry in the section and the lines it contains.
+        
+    #     """
+    #     out = {}
+    #     entry = None
+    #     for p in self.get_section(section=section, remove_comments=remove_comments):
+    #         if not p.startswith(('\t', ' ')):
+    #             entry = p
+    #             out[entry] = []
+    #         else:
+    #             out[entry].append(p.lstrip())
+        
+    #     return out
 
     def get_SOLUTION_MASTER_SPECIES(self):
         """
@@ -211,7 +280,7 @@ class datParser:
         -------
         None
         """
-        solution_species = self.get_section('SOLUTION_MASTER_SPECIES')
+        solution_species = self.get_section('SOLUTION_MASTER_SPECIES', remove_comments=True)
         out_species = {}
         for s in solution_species:
             sp = s.split()
@@ -223,14 +292,14 @@ class datParser:
         self.master_2_element = {v: k for k, v in self.element_2_master.items()}
         self.master_nocharge_2_element = {novalence.sub('', v): k for k, v in self.element_2_master.items()}
 
-    def get_SOLUTION_SPECIES(self, targets, allow_HCO=True):
+    def get_SOLUTION_SPECIES(self, targets=None, allow_HCO=True):
         """
         Returns a list of solution species present in the database that are relevant to the target elements.
 
         Parameters
         ----------
         targets : str or list
-            An element or list of elements of interest.
+            An element or list of elements of interest. If None, all species are returned.
         allow_HCO : bool
             If True, also return species that contain the target elements
             and one or more of H, C and O.
@@ -239,54 +308,70 @@ class datParser:
         -------
         set : calculated species in the database containing the target elements.
         """
-        solution_species = self.get_species(targets, 'SOLUTION_SPECIES')
         targets = self._targets_handler(targets=targets)
-        if allow_HCO:
-            ftargets = targets.union(['H', 'C', 'O'])
-        else:
-            ftargets = targets
-
+        solution_species = self.parse_SOLUTION_SPECIES(remove_comments=True)
+        srm = re.compile('^[0-9]+')  # pattern for removing stoichiometric multiplier from speciues
         out_species = set()
-        for s in solution_species:
-            _, prod = self._reacsplit(s)  # only look at reaction products
-            for p in prod:
-                pels = get_elements(p)
-                if issubset(pels, ftargets) and pels.intersection(targets):
-                    out_species.add(p)
-        
-        return out_species
-    
-    def parse_PHASES(self):
-        """
-        Parse the PHASES part of the database into a dictionary
 
+        if targets is None:
+            for s in solution_species.keys():
+                _, prod = reacsplit(s)  # only look at reaction products
+                for p in prod:
+                    out_species.add(srm.sub('', p))
+        else:
+            if allow_HCO:
+                ftargets = targets.union(['H', 'C', 'O'])
+            else:
+                ftargets = targets
+
+            for s in solution_species.keys():
+                _, prod = reacsplit(s)  # only look at reaction products
+                for p in prod:
+                    pels = get_elements(p)
+                    if issubset(pels, ftargets) and pels.intersection(targets):
+                        out_species.add(srm.sub('', p))
+        
+        return out_species.difference(['', None])
+
+    def parse_PHASES(self, remove_comments=True):
+        """
+        Turns tabbed database entries into a dict of {entry: [lines]}.
+        
+        Each entry is a title, followed by a number of tab-inset lines that
+        are associated with that entry.
+        
         Parameters
         ----------
-        None
+        section : str
+            The name of the section in the database, for example 'SOLUTION_SPECIES'.
+        remove_comments : bool
+            If True, in-line comments (anything preceeding '#') are removed.
 
         Returns
         -------
-        None
-        """
-        phases = {}
-        phase = ''
-        for p in self.get_section('PHASES'):
-            if '\t' not in p:  # phase names don't have tabs
-                phase = p
-                phases[p] = []
-            else:
-                phases[phase].append(p.lstrip())
+        dict : containing each entry in the section and the lines it contains.
         
-        self.phases = phases
+        """
+        section = 'PHASES'
+        out = {}
+        entry = None
+        for p in self.get_section(section=section, remove_comments=remove_comments):
+            if not p.startswith(('\t', ' ')):
+                entry = p.split()[0]  # split because some have an additional number in the database
+                out[entry] = []
+            else:
+                out[entry].append(p.lstrip())
+        
+        return out
 
-    def get_PHASES(self, targets, allow_HCO=True):
+    def get_PHASES(self, targets=None, allow_HCO=True):
         """
         Returns all phases that contain target elements.
 
         Parameters
         ----------
         targets : str or list
-            An element or list of elements of interest.
+            An element or list of elements of interest. If None, all phases are returned.
         allow_HCO : bool
             If True, also return species that contain the target elements
             and one or more of H, C and O.
@@ -296,15 +381,17 @@ class datParser:
         set : calculated phases in the database containing the target elements.
         """
         
-        if not hasattr(self, 'phases'):
-            self.parse_PHASES()
+        self.phases = self.parse_PHASES()
 
         targets = self._targets_handler(targets)
+
+        if targets is None:
+            return self.phases
 
         possible_phases = set()
         for p, i in self.phases.items():
             for t in targets:
-                phase_formula = self._reacsplit(i[0])[0][0]
+                phase_formula = reacsplit(i[0])[0][0]
                 if t in phase_formula:
                     possible_phases.add((p, phase_formula))
         
@@ -315,6 +402,7 @@ class datParser:
         for p, f in possible_phases:
             if issubset(get_elements(f), ftargets):
                 out_phases.add(p)
+
         
         return out_phases
 
@@ -334,6 +422,9 @@ class datParser:
         """
         if isinstance(inputs, dict):
             inputs = pd.DataFrame(inputs, index=[0])
+        elif isinstance(inputs, list):
+            inputs = pd.DataFrame(index=[0], columns=inputs)
+
 
         retain = []
         final_names = []
@@ -398,7 +489,7 @@ class datParser:
         set : containing names of all elements in the input
         """
         inputs = self.check_inputs(inputs)
-
+        
         targets = set()
         for k in inputs.columns:
             if k in self._exempt_inputs or (k[0] == '-') or uncertainty_id in k:
@@ -407,7 +498,7 @@ class datParser:
         if drop_OH:
             targets = targets.difference({'H', 'O'})  # get rid of OH ions
 
-        return targets
+        return targets.union(valid_elements)
 
 
     def generate_SELECTED_OUTPUT(self, targets, totals=True, molalities=True, activities=True, phases=True, phase_targets=None, allow_HCO=True):
@@ -474,7 +565,7 @@ class datParser:
             solutions.append(make_solution(v, n))
         return '\n'.join(solutions)
 
-    def make_PHREEQC_input(self, inputs, output_totals=True, output_molalities=True, output_activities=True, output_phases=True, phase_targets=None, allow_HCO_phases=True, drop_OH_species=True, uncertainty_id='_std'):
+    def make_PHREEQC_input(self, inputs, targets=None, output_totals=True, output_molalities=True, output_activities=True, output_phases=True, phase_targets=None, allow_HCO_phases=True, drop_OH_species=True, uncertainty_id='_std'):
         """
         Generate an input for calculating PHREEQC solutions.
 
@@ -494,7 +585,8 @@ class datParser:
         """
         inputs = self.check_inputs(inputs)
         
-        targets = self.get_target_elements(inputs, drop_OH=drop_OH_species, uncertainty_id=uncertainty_id)
+        if targets is None:
+            targets = self.get_target_elements(inputs, drop_OH=drop_OH_species, uncertainty_id=uncertainty_id)
 
         # inputs
         solutions = self.generate_SOLUTIONS(inputs)
