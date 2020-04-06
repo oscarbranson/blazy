@@ -5,6 +5,7 @@ Functions for handling iPHREEQC inputs and outputs.
 import os
 import re
 import platform
+import numpy as np
 import pandas as pd
 import pkg_resources as pkgrs
 from . import parser
@@ -37,9 +38,15 @@ def make_solution(inputs, n=1):
     for k, v in inputs.items():
         if isinstance(v, str):
             inp.append(f'    {k:20s}{v:s}')
-        else:
+        elif not np.isnan(v):
             inp.append(f'    {k:20s}{float(v):.8e}')
     return '\n'.join(inp) + '\n'
+
+def select_inputs(inputs, column_lookup):
+    selected = inputs.loc[:, column_lookup.keys()]
+    selected.columns = [column_lookup[c] for c in selected.columns]
+    
+    return selected
 
 # def make_default_output(database, inputs):
 
@@ -147,7 +154,7 @@ def run_phreeqc(input_string, database=None, phreeq_path=None, output_file=False
     out = phreeqc.get_selected_output_array()
     phreeqc.destroy_iphreeqc()
     if parse_output:
-        return output_parser(out)
+        return output_parser(out).replace(-999.999, np.nan)
     else:
         return out
 
