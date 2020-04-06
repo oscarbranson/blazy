@@ -31,6 +31,40 @@ def get_elements(molecule):
     
     return set(els.findall(molecule))
 
+def valence_long2short(ion):
+    """
+    Converts, e.g., Ca++ to Ca+2
+    """
+    charge = re.compile('[+-]+$')
+    
+    chg = charge.findall(ion)
+    if chg:
+        out = chg[0][0]
+        n = len(chg[0])
+        if n > 1:
+            out = f"{out}{n}"
+    
+        return charge.sub(out, ion)
+    else:
+        return ion
+    
+def valence_short2long(ion):
+    """
+    Converts, e.g., Ca+2 to Ca++
+    """
+    charge = re.compile('[+-][0-9]+$')
+    
+    chg = charge.findall(ion)
+    if chg:
+        out = chg[0][0]
+        
+        if len(chg[0]) > 1:
+            n = int(chg[0][1:])
+            out *= n    
+        return charge.sub(out, ion)
+    else:
+        return ion
+
 def decompose_molecule(molecule, n=1):
     """
     Returns the chemical constituents of the molecule, and their number.
