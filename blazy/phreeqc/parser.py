@@ -498,7 +498,7 @@ class datParser:
         if drop_OH:
             targets = targets.difference({'H', 'O'})  # get rid of OH ions
 
-        return targets.union(valid_elements)
+        return targets.intersection(valid_elements)
 
 
     def generate_SELECTED_OUTPUT(self, targets, totals=True, molalities=True, activities=True, phases=True, phase_targets=None, allow_HCO=True):
