@@ -9,9 +9,12 @@ import pandas as pd
 from glob import glob
 import pkg_resources as pkgrs
 
-from ..helpers import issubset
+from ..helpers import issubset, get_database_header
 from ..chemistry import get_elements, valid_elements
 from .io import make_solution
+
+# make sure warnings are always shown
+warnings.filterwarnings('always', category=UserWarning)
 
 def reacsplit(reac):
     """
@@ -67,7 +70,7 @@ class datParser:
     database : path
         Name of database or path to phreeqc database.
     """
-    def __init__(self, database):
+    def __init__(self, database, silent=False):
         """
         Class for loading and parsing PHREEQC databases.
 
@@ -80,6 +83,8 @@ class datParser:
             Name of database or path to phreeqc database.
         """
         self.path = self._database_path_handler(database)
+        if not silent:
+            print('Using ' + get_database_header(self.path))
         self.name = os.path.basename(database).split('.')[0]
         
         self.db = self.load(self.path)
@@ -281,18 +286,40 @@ class datParser:
         None
         """
         solution_species = self.get_section('SOLUTION_MASTER_SPECIES', remove_comments=True)
-        out_species = {}
+        self.master_species_table = {}
         for s in solution_species:
             sp = s.split()
-            out_species[sp[0]] = sp[1]
+            self.master_species_table[sp[0]] = sp[1:]
 
         novalence = re.compile('[+-][0-9]?')
-        self.element_2_master = out_species
+        self.element_2_master = {k: v[0] for k, v in self.master_species_table.items()}
         self.element_2_master_nocharge = {k: novalence.sub('', v) for k, v in self.element_2_master.items()}
         self.master_2_element = {v: k for k, v in self.element_2_master.items()}
         self.master_nocharge_2_element = {novalence.sub('', v): k for k, v in self.element_2_master.items()}
+    
+    def list_valid_species(self):
+        """
+        Prints a list of valid master species in the database.
+        """
+        headers = ['Species Name', 'Species', 'Alk', 'Gram Formula', 'Weight']
+        pad = 3
+        L0 = len(headers[0])
+        Ls = [len(h) for h in headers[1:]]
 
-    def get_SOLUTION_SPECIES(self, targets=None, allow_HCO=True):
+        for k, v in self.master_species_table.items():
+            if len(k) > L0:
+                L0 = len(k)
+            for i, vi in enumerate(v):
+                if len(vi) > Ls[i]:
+                    Ls[i] = len(vi)
+        
+        print(f'{headers[0]:>{L0}}' + ''.join([f'{h:>{L + pad}}' for h, L in zip(headers[1:], Ls)]))
+        for k, v in self.master_species_table.items():
+            print(f'{k:>{L0}}' + ''.join([f'{h:>{L + pad}}' for h, L in zip(v, Ls)]))
+        
+        print('\nFor more info, see https://wwwbrr.cr.usgs.gov/projects/GWC_coupled/phreeqc/html/final-57.html')
+
+    def get_SOLUTION_SPECIES(self, targets=None, include_foreign=True):
         """
         Returns a list of solution species present in the database that are relevant to the target elements.
 
@@ -300,9 +327,9 @@ class datParser:
         ----------
         targets : str or list
             An element or list of elements of interest. If None, all species are returned.
-        allow_HCO : bool
-            If True, also return species that contain the target elements
-            and one or more of H, C and O.
+        include_foreign : bool
+            If True, include species containing any of targets *and* other elements
+            not in targets.
 
         Returns
         -------
@@ -319,17 +346,19 @@ class datParser:
                 for p in prod:
                     out_species.add(srm.sub('', p))
         else:
-            if allow_HCO:
-                ftargets = targets.union(['H', 'C', 'O'])
-            else:
-                ftargets = targets
-
             for s in solution_species.keys():
                 _, prod = reacsplit(s)  # only look at reaction products
                 for p in prod:
                     pels = get_elements(p)
-                    if issubset(pels, ftargets) and pels.intersection(targets):
-                        out_species.add(srm.sub('', p))
+                    if include_foreign:
+                        if pels.intersection(targets):
+                            out_species.add(srm.sub('', p))
+                    else:
+                        if issubset(pels, targets) and pels.intersection(targets):
+                            out_species.add(srm.sub('', p))
+
+        # this isn't quite right - should get all possible species given solution compositions,
+        # *then* filter by targets. At the moment returns species containing irrelevant elements.
         
         return out_species.difference(['', None])
 
@@ -460,12 +489,19 @@ class datParser:
                     raise ValueError(f"{k} is not a valid element or species name for the {self.name} database.")
         if changed:
             if len(msg_rems + msg_subs) > 0:
-                msg = f"\n\nThere were a few items in your inputs which aren't valid in the {self.name} database."
+                msg = (f"\n\nThere were columns in your inputs which aren't valid in the {self.name} database." + 
+                       "\nWe have either tried to substitute them with valid inputs or removed them.")
                 if len(msg_subs) > 0:
-                    msg += f"\nInvalid items which we were able to substitute:\n" + '\n'.join(msg_subs)
+                    msg += f"\nInvalid columns which we were able to substitute:\n" + '\n'.join(msg_subs)
                 if len(msg_rems) > 0:
-                    msg += f"\nInvalid items which we have removed:\n" + '\n'.join(msg_rems)
-                msg += "\nPlease make sure these substitions make sense!"
+                    msg += f"\nInvalid columns which we have removed:\n" + '\n'.join(msg_rems)
+                msg += (
+                    "\nPlease make sure these substitions/removals make sense!" + 
+                    "\nIf they don't please manually specify links between column names\nand valid species in your chosen database." +
+                    "\n\nCreate a lookup dictionary linking column names to valid species names {'column_name': 'species_name'}," + 
+                    "\nthen prepare your data for input using the `.select_inputs()` function." +
+                    f"\n\nTo see a list of valid species names for {self.name}.dat, use the `.list_valid_species()` function."
+                )
 
                 warnings.warn(msg)
 
@@ -473,6 +509,23 @@ class datParser:
             inputs.columns = final_names
 
         return inputs
+
+    def select_inputs(self, inputs, column_lookup, uncertainty_id='_std'):
+        select_columns = []
+        colnames = []
+        for c in column_lookup.keys():
+            select_columns.append(c)
+            colnames.append(column_lookup[c])
+            if c + uncertainty_id in inputs.columns:
+                select_columns.append(c + uncertainty_id)
+                colnames.append(column_lookup[c] + uncertainty_id)
+
+        selected = inputs.loc[:, select_columns]
+        selected.columns = colnames
+
+        selected = self.check_inputs(selected, uncertainty_id=uncertainty_id)
+        
+        return selected
 
     def get_target_elements(self, inputs, drop_OH=True, uncertainty_id='_std'):
         """

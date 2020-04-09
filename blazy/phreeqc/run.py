@@ -72,5 +72,16 @@ class iphreeqc:
 
         return self.run_phreeqc(input_string)
 
-    def run_mc(self, inputs, N, output_totals=True, output_molalities=True, output_activities=True, output_phases=True, phase_targets=None, allow_HCO_phases=True, drop_OH_species=True, uncertainty_id='_std', distribution=None):
-        return run_mc(inputs=inputs, N=N, database=self.db, output_totals=output_totals, output_molalities=output_molalities, output_activities=output_activities, output_phases=output_phases, phase_targets=phase_targets, allow_HCO_phases=allow_HCO_phases, drop_OH_species=drop_OH_species, uncertainty_id=uncertainty_id)
+    def run_mc(self, inputs, N, targets=None, output_totals=True, output_molalities=True, output_activities=True, output_phases=True, phase_targets=None, allow_HCO_phases=True, drop_OH_species=True, uncertainty_id='_std', distribution=None):
+        return run_mc(inputs=inputs, N=N, database=self.db, targets=targets, output_totals=output_totals, output_molalities=output_molalities, output_activities=output_activities, output_phases=output_phases, phase_targets=phase_targets, allow_HCO_phases=allow_HCO_phases, drop_OH_species=drop_OH_species, uncertainty_id=uncertainty_id)
+
+    def list_valid_species(self):
+        print(f'Valid Species for {self.db.name}.dat:\n')
+        self.db.list_valid_species()
+        print(
+            "\nCreate a lookup dictionary linking column names to valid species names {'column_name': 'species_name'}," + 
+            "\nthen prepare your data for input using the `.select_inputs()` function."
+        )
+
+    def select_inputs(self, inputs, column_lookup, uncertainty_id='_std'):
+        return self.db.select_inputs(inputs=inputs, column_lookup=column_lookup, uncertainty_id=uncertainty_id)
