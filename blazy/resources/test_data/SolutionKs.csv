@@ -1,0 +1,41 @@
+# Add columns as required. Pay close attention to units (mol/kgw, mol/kgs or mol/L)
+pH,T (°C),[Na] (m),[K] (m),[Mg] (m),[Ca] (m),[Cl] (m),[SO4] (m),[B] (m),Ion. Str. (I),Salinity,pKB,K1_carb,K2_carb,reference,solution,units,pHscale
+7,25,,0.08015667,,,0.08015667,,0.01,0.1,,9.016,,,Dickson (1990) J. Chem. Eng.,KCl,mol/kgw,free?
+7,25,,0.28015,,,0.28015,,0.01,0.3,,8.939,,,Dickson (1990) J. Chem. Eng.,KCl,mol/kgw,free?
+7,25,,0.48024333,,,0.48024333,,0.01,0.5,,8.907,,,Dickson (1990) J. Chem. Eng.,KCl,mol/kgw,free?
+7,25,,0.98061667,,,0.98061667,,0.01,1,,8.899,,,Dickson (1990) J. Chem. Eng.,KCl,mol/kgw,free?
+7,25,,1.484688,,,1.484688,,0.01,1.5,,8.91,,,Dickson (1990) J. Chem. Eng.,KCl,mol/kgw,free?
+7,25,0.5,,,,0.5,,0.003,0.5,,8.856,,,Hershey (1986) GCA,NaCl,mol/kgw,free?
+7,25,1,,,,1,,0.003,1,,8.813,,,Hershey (1986) GCA,NaCl,mol/kgw,free?
+7,25,2,,,,2,,0.003,2,,8.79,,,Hershey (1986) GCA,NaCl,mol/kgw,free?
+7,25,3,,,,3,,0.003,3,,8.83,,,Hershey (1986) GCA,NaCl,mol/kgw,free?
+7,25,4,,,,4,,0.003,4,,8.881,,,Hershey (1986) GCA,NaCl,mol/kgw,free?
+7,25,5,,,,5,,0.003,5,,8.952,,,Hershey (1986) GCA,NaCl,mol/kgw,free?
+7,25,6,,,,6,,0.003,6,,9.045,,,Hershey (1986) GCA,NaCl,mol/kgw,free?
+7,25,0,,,,0,,0.01,0,,9.2365,,,Owen and King (1943),NaCl,mol/kgw,free?
+7,25,0.02,,,,0.02,,0.01,0.02,,9.1149,,,Owen and King (1943),NaCl,mol/kgw,free?
+7,25,0.07,,,,0.07,,0.01,0.07,,9.0338,,,Owen and King (1943),NaCl,mol/kgw,free?
+7,25,0.36,,,,0.36,,0.01,0.36,,8.8901,,,Owen and King (1943),NaCl,mol/kgw,free?
+7,25,0.725,,,,0.725,,0.01,0.725,,8.8316,,,Owen and King (1943),NaCl,mol/kgw,free?
+7,25,1.25,,,,1.25,,0.01,1.25,,8.7977,,,Owen and King (1943),NaCl,mol/kgw,free?
+7,25,2,,,,2,,0.01,2,,8.7927,,,Owen and King (1943),NaCl,mol/kgw,free?
+7,25,3,,,,3,,0.01,3,,8.8213,,,Owen and King (1943),NaCl,mol/kgw,free?
+7,25,0.0674,0.0015,0.0076,0.0015,0.0789,0.0041,0.01,0.1,5,8.9211,,,Dickson (1990) DSR,ASW,mol/kgs,total
+7,25,0.2041,0.0044,0.023,0.0045,0.239,0.0123,0.01,0.3,15,8.7508,,,Dickson (1990) DSR,ASW,mol/kgs,total
+7,25,0.3437,0.0075,0.0387,0.0076,0.4024,0.0207,0.01,0.51,25,8.6557,,,Dickson (1990) DSR,ASW,mol/kgs,total
+7,25,0.4862,0.0106,0.0547,0.0108,0.5692,0.0293,0.01,0.72,35,8.5797,,,Dickson (1990) DSR,ASW,mol/kgs,total
+7,25,0.6316,0.0137,0.0711,0.014,0.7395,0.038,0.01,0.94,45,8.5302,,,Dickson (1990) DSR,ASW,mol/kgs,total
+7,25,0.5,,0.05,,0.6,,0.003,0.65,,8.726,,,Hershey (1986) GCA,Na-Mg-Cl,mol/kgw,free?
+7,25,1,,0.05,,1.1,,0.003,1.15,,8.712,,,Hershey (1986) GCA,Na-Mg-Cl,mol/kgw,free?
+7,25,2,,0.05,,2.1,,0.003,2.15,,8.71,,,Hershey (1986) GCA,Na-Mg-Cl,mol/kgw,free?
+7,25,3,,0.05,,3.1,,0.003,3.15,,8.764,,,Hershey (1986) GCA,Na-Mg-Cl,mol/kgw,free?
+7,25,4,,0.05,,4.1,,0.003,4.15,,8.82,,,Hershey (1986) GCA,Na-Mg-Cl,mol/kgw,free?
+7,25,5,,0.05,,5.1,,0.003,5.15,,8.897,,,Hershey (1986) GCA,Na-Mg-Cl,mol/kgw,free?
+7,25,6,,0.05,,6.1,,0.003,6.15,,8.982,,,Hershey (1986) GCA,Na-Mg-Cl,mol/kgw,free?
+7,25,0.5,,,0.05,0.6,,0.003,0.65,,8.675,,,Hershey (1986) GCA,Na-Ca-Cl,mol/kgw,free?
+7,25,1,,,0.05,1.1,,0.003,1.15,,8.664,,,Hershey (1986) GCA,Na-Ca-Cl,mol/kgw,free?
+7,25,2,,,0.05,2.1,,0.003,2.15,,8.672,,,Hershey (1986) GCA,Na-Ca-Cl,mol/kgw,free?
+7,25,3,,,0.05,3.1,,0.003,3.15,,8.706,,,Hershey (1986) GCA,Na-Ca-Cl,mol/kgw,free?
+7,25,4,,,0.05,4.1,,0.003,4.15,,8.778,,,Hershey (1986) GCA,Na-Ca-Cl,mol/kgw,free?
+7,25,5,,,0.05,5.1,,0.003,5.15,,8.856,,,Hershey (1986) GCA,Na-Ca-Cl,mol/kgw,free?
+7,25,6,,,0.05,6.1,,0.003,6.15,,8.942,,,Hershey (1986) GCA,Na-Ca-Cl,mol/kgw,free?
