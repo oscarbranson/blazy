@@ -49,9 +49,10 @@ def make_and_run_input(inputs, outputs, db):
     out = run_phreeqc(input_str, parse_output=True, database=db.name)
     return out
 
-def run_mc(inputs, N, database, output_totals=True, output_molalities=True, output_activities=True, output_phases=True, phase_targets=None, allow_HCO_phases=True, drop_OH_species=True, uncertainty_id='_std', distribution=None):
+def run_mc(inputs, N, database, targets=None, output_totals=True, output_molalities=True, output_activities=True, output_phases=True, phase_targets=None, allow_HCO_phases=True, drop_OH_species=True, uncertainty_id='_std', distribution=None):
     inputs = database.check_inputs(inputs, uncertainty_id=uncertainty_id)
-    targets = database.get_target_elements(inputs, drop_OH=drop_OH_species, uncertainty_id=uncertainty_id)
+    if targets is None:
+        targets = database.get_target_elements(inputs, drop_OH=drop_OH_species, uncertainty_id=uncertainty_id)
     outputs = database.generate_SELECTED_OUTPUT(targets, totals=output_totals,
                                                 molalities=output_molalities, activities=output_activities,
                                                 phases=output_phases, phase_targets=phase_targets, 
