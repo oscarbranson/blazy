@@ -117,3 +117,26 @@ def decompose_molecule(molecule, n=1):
     
     return comp
 
+def SW():
+    """
+    Returns dict containing composition of standard seawater for use with make_PHREEQC_input.
+
+    From Dickson, Sabine and Christian (2007) 'Best Practices in Ocean Acidification Research'
+    Chapter 5, Table 3.
+    """
+    sw = {
+        'Cl': 0.54586,
+        'S(6)': 0.02824,
+        'Br': 0.00084,
+        'F': 0.00007,
+        'Na': 0.46906,
+        'Mg': 0.05282,
+        'Ca': 0.01028,
+        'K': 0.01021,
+        'Sr': 0.00009,
+        'B': 0.00042,
+        'C(6)': 0.00204,
+        'unit': 'mol/kgs'
+    }
+
+    return sw

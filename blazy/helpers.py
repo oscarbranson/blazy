@@ -17,15 +17,18 @@ def load_reference_data(file=None):
     
     return pd.read_csv(file, comment='#')
 
-def list_databases(show_headers=True):
+def list_databases(show_headers=True, silent=False):
     dbases = glob(pkgrs.resource_filename('blazy', os.path.join('resources', 'database', '*.dat')))
 
-    for d in sorted(dbases):
-        if show_headers:
-            print(get_database_header(d))
-        else:
-            print(os.path.basename(d))
-        print()
+    if not silent:
+        for d in sorted(dbases):
+            if show_headers:
+                print(get_database_header(d))
+            else:
+                print(os.path.basename(d))
+            print()
+    
+    return dbases
 
 def get_database_header(d):
     out = [os.path.basename(d)]
