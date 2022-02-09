@@ -96,7 +96,7 @@ class datParser:
             'temperature', 'temp', 
             'pressure', 'press',
             'pH', 'pe', 
-            'redox',
+            'redox', 'O(0)', '-water'
             'density', 'unit'
         ]
 
