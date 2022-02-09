@@ -3,6 +3,7 @@ Functions for dealing with molecule names.
 """
 
 import re
+import numpy as np
 from .helpers import issubset
 
 # a list of valid elements
@@ -117,6 +118,15 @@ def decompose_molecule(molecule, n=1):
     
     return comp
 
+def calc_Istr(ion_molarity, ion_carges):
+    return 0.5 * np.sum(ion_molarity * ion_carges**2)
+
+def pHNBS_2_pHMacInnes(pHNBS, Istr):
+    return pHNBS + 0.0224 * np.log(Istr) + 0.0665
+
+def pHMacInnes_2_pHNBS(pHMacInnes, Istr):
+    return pHMacInnes - 0.0224 * np.log(Istr) - 0.0665
+
 def SW():
     """
     Returns dict containing composition of standard seawater for use with make_PHREEQC_input.
@@ -135,7 +145,7 @@ def SW():
         'K': 0.01021,
         'Sr': 0.00009,
         'B': 0.00042,
-        'C(6)': 0.00204,
+        'C(4)': 0.00204,
         'unit': 'mol/kgs'
     }
 
