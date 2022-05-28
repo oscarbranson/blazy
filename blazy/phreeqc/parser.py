@@ -4,6 +4,7 @@ Functions for parsing iPHREEQC databases.
 
 import re
 import os
+import itertools
 import warnings
 import pandas as pd
 from glob import glob
@@ -634,7 +635,7 @@ class datParser:
         solutions = []
         for n, v in inputs.iterrows():
             solutions.append(make_solution(v, n))
-        return '\n'.join(solutions)
+        return solutions
     
     def add_EQUILIBRIUM_PHASES(self, phases):
         """
@@ -642,18 +643,27 @@ class datParser:
 
         Parameters
         ----------
-        phases : dict
-            The {name: target_log10SI} of the phases to be added to the input.
+        phases : list of tuples
+            Of [(name, target_log10SI, *options)] of the phases to be added to the
+            input, where *options are valid entries for EQUILIBRIUM_PHASES lines.
         """
+        if not isinstance(phases[0][0], str):
+            return [self.add_EQUILIBRIUM_PHASES(p) for p in phases]
+
+        valid_phases = []
+        for p in phases:
+            if p[0] not in self.get_PHASES():
+                print(f'{p[0]} is not in the databse; removed.')
+            else:
+                valid_phases.append(map(str,p))
         
-        for phase in phases:
-            if phase not in self.get_PHASES():
-                raise ValueError(f'{phase} is not in the databse.')
-                
-        return f"EQUILIBRIUM_PHASES\n    " + '\n    '.join([f'{phase}  {target}' for phase, target in phases.items()])
+        lines = ['  '.join(p) for p in valid_phases]
+        
+        return 'EQUILIBRIUM_PHASES\n   ' + '\n   '.join(lines)
 
 
-    def make_PHREEQC_input(self, inputs, targets=None, output_totals=True, output_molalities=True, output_activities=True, output_phases=True, phase_targets=None, allow_HCO_phases=True, drop_OH_species=True, uncertainty_id='_std'):
+
+    def make_PHREEQC_input(self, inputs, targets=None, output_totals=True, output_molalities=True, output_activities=True, output_phases=True, phase_targets=None, allow_HCO_phases=True, drop_OH_species=True, uncertainty_id='_std', equilibrium_phases=None):
         """
         Generate an input for calculating PHREEQC solutions.
 
@@ -670,6 +680,11 @@ class datParser:
         database : str
             Which database the input_string is for. Required for input
             checking and automatic output generation.
+        equilibrium_phases : list of tuples
+            Of [(name, target_log10SI, *options)] of the phases to be added to the
+            input, where *options are valid entries for EQUILIBRIUM_PHASES lines.
+            Can also be a list containing lists of tuples, where each entry in that
+            list is applied to each solution separately.
         """
         inputs = self.check_inputs(inputs)
         
@@ -682,6 +697,17 @@ class datParser:
         # outputs
         output = self.generate_SELECTED_OUTPUT(targets, totals=output_totals, molalities=output_molalities, activities=output_activities, phases=output_phases, phase_targets=phase_targets, allow_HCO=allow_HCO_phases)
         
-        self.input_str = solutions + '\n' + output + '\nEND'
+        if equilibrium_phases is None:
+            self.input_str = '\n'.join(solutions) + '\n' + output + '\nEND'
+        else:
+            eqps = self.add_EQUILIBRIUM_PHASES(equilibrium_phases)
+
+            if isinstance(eqps, str):
+                self.input_str = '\n'.join([s + '\n' + eqps + '\n' + output + '\nEND' for s in solutions])
+            else:
+                inp = []
+                for sol, eq in itertools.product(solutions, eqps):
+                    inp.append(sol + '\n' + eq + '\n' + output  + '\nEND')
+                self.input_str = '\n'.join(inp)
     
         return self.input_str
