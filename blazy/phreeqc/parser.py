@@ -97,7 +97,7 @@ class datParser:
             'pressure', 'press',
             'pH', 'pe', 
             'redox', 'O(0)', '-water'
-            'density', 'unit'
+            'density', 'unit', 'units'
         ]
 
     def _database_path_handler(self, database):
@@ -434,6 +434,24 @@ class datParser:
 
         
         return out_phases
+    
+    def list_valid_phases(self):
+        """
+        Prints a list of valid phases in the database.
+        """
+        headers = ['Phase', 'Formula']
+        pad = 3
+        L0 = len(headers[0])
+        Ls = [len(h) for h in headers[1:]]
+        
+        phases = self.get_PHASES()
+        
+        L = max([L0] + [len(k) for k in phases]) + 3
+        
+        print(f'{headers[0]:>{L}}' + ''.join([f'{h:>{L + pad}}' for h, L in zip(headers[1:], Ls)]))
+        for k, v in phases.items():
+            formula = v[0].split(' =') [0]
+            print(f'{k:>{L}}' +  f'   {formula:>{pad}}')
 
     def check_inputs(self, inputs, remove_failures=True, uncertainty_id='_std'):
         """
@@ -617,6 +635,23 @@ class datParser:
         for n, v in inputs.iterrows():
             solutions.append(make_solution(v, n))
         return '\n'.join(solutions)
+    
+    def add_EQUILIBRIUM_PHASES(self, phases):
+        """
+        Add EQUILIBRIUM_PHASES to the PHREEQC input.
+
+        Parameters
+        ----------
+        phases : dict
+            The {name: target_log10SI} of the phases to be added to the input.
+        """
+        
+        for phase in phases:
+            if phase not in self.get_PHASES():
+                raise ValueError(f'{phase} is not in the databse.')
+                
+        return f"EQUILIBRIUM_PHASES\n    " + '\n    '.join([f'{phase}  {target}' for phase, target in phases.items()])
+
 
     def make_PHREEQC_input(self, inputs, targets=None, output_totals=True, output_molalities=True, output_activities=True, output_phases=True, phase_targets=None, allow_HCO_phases=True, drop_OH_species=True, uncertainty_id='_std'):
         """
