@@ -119,7 +119,7 @@ def decompose_molecule(molecule, n=1):
     return comp
 
 def calc_Istr(ion_molarity, ion_carges):
-    return 0.5 * np.sum(ion_molarity * ion_carges**2)
+    return 0.5 * np.sum(ion_molarity * ion_carges**2, axis=1)
 
 def pHNBS_2_pHMacInnes(pHNBS, Istr):
     return pHNBS + 0.0224 * np.log(Istr) + 0.0665
