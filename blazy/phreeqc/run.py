@@ -63,12 +63,12 @@ class iphreeqc:
     # def make_input_string(self, inputs, targets=None, output_totals=True, output_molalities=True, output_activities=True, output_phases=True, phase_targets=None, allow_HCO_phases=True, drop_OH_species=True, uncertainty_id='_std'):
         # return self.db.make_PHREEQC_input(inputs=inputs, targets=targets, output_totals=output_totals, output_molalities=output_molalities, output_activities=output_activities, output_phases=output_phases, phase_targets=phase_targets, allow_HCO_phases=allow_HCO_phases, drop_OH_species=drop_OH_species, uncertainty_id=uncertainty_id)
     
-    def run(self, inputs, targets=None, output_totals=True, output_molalities=True, output_activities=True, output_phases=True, phase_targets=None, allow_HCO_phases=True, drop_OH_species=True, uncertainty_id='_std'):
+    def run(self, inputs, targets=None, output_totals=True, output_molalities=True, output_activities=True, output_phases=True, phase_targets=None, equilibrium_phases=None, allow_HCO_phases=True, drop_OH_species=True, uncertainty_id='_std'):
         inputs = self.db.check_inputs(inputs, uncertainty_id=uncertainty_id)
         
         inputs = inputs.loc[:, [c for c in inputs.columns if uncertainty_id not in c]]
 
-        self._input_string = self.db.make_PHREEQC_input(inputs=inputs, targets=targets, output_totals=output_totals, output_molalities=output_molalities, output_activities=output_activities, output_phases=output_phases, phase_targets=phase_targets, allow_HCO_phases=allow_HCO_phases, drop_OH_species=drop_OH_species, uncertainty_id=uncertainty_id)
+        self._input_string = self.db.make_PHREEQC_input(inputs=inputs, targets=targets, output_totals=output_totals, output_molalities=output_molalities, output_activities=output_activities, output_phases=output_phases, phase_targets=phase_targets, allow_HCO_phases=allow_HCO_phases, drop_OH_species=drop_OH_species, uncertainty_id=uncertainty_id, equilibrium_phases=equilibrium_phases)
         
         return self.run_phreeqc(self._input_string)
 

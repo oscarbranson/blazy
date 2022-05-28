@@ -127,7 +127,7 @@ def pHNBS_2_pHMacInnes(pHNBS, Istr):
 def pHMacInnes_2_pHNBS(pHMacInnes, Istr):
     return pHMacInnes - 0.0224 * np.log(Istr) - 0.0665
 
-def SW():
+def SW(sal):
     """
     Returns dict containing composition of standard seawater for use with make_PHREEQC_input.
 
@@ -135,17 +135,17 @@ def SW():
     Chapter 5, Table 3.
     """
     sw = {
-        'Cl': 0.54586,
-        'S(6)': 0.02824,
-        'Br': 0.00084,
-        'F': 0.00007,
-        'Na': 0.46906,
-        'Mg': 0.05282,
-        'Ca': 0.01028,
-        'K': 0.01021,
-        'Sr': 0.00009,
-        'B': 0.00042,
-        'C(4)': 0.00204,
+        'Cl': 0.54586 * sal / 35.,
+        'S(6)': 0.02824 * sal / 35.,
+        'Br': 0.00084 * sal / 35.,
+        'F': 0.00007 * sal / 35.,
+        'Na': 0.46906 * sal / 35.,
+        'Mg': 0.05282 * sal / 35.,
+        'Ca': 0.01028 * sal / 35.,
+        'K': 0.01021 * sal / 35.,
+        'Sr': 0.00009 * sal / 35.,
+        'B': 0.00042 * sal / 35.,
+        'C(4)': 0.00204 * sal / 35.,
         'unit': 'mol/kgs'
     }
 
