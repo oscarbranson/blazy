@@ -86,7 +86,7 @@ class datParser:
         self.path = self._database_path_handler(database)
         if not silent:
             print('Using ' + get_database_header(self.path))
-        self.name = os.path.basename(database).split('.')[0]
+        self.name = os.path.basename(database).replace('.dat','')
         
         self.db = self.load(self.path)
         self.sections = self.find_sections()
@@ -121,7 +121,7 @@ class datParser:
         
         dbase_path = pkgrs.resource_filename('blazy', os.path.join('resources','database'))
         valid_dbases = glob(os.path.join(dbase_path, '*.dat'))
-        dbase_names = sorted([os.path.basename(d).split('.')[0] for d in valid_dbases])
+        dbase_names = sorted([os.path.basename(database).replace('.dat','') for d in valid_dbases])
 
         if database in dbase_names:
             return pkgrs.resource_filename('blazy', os.path.join('resources','database', database.replace('.dat','') + '.dat'))
