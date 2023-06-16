@@ -448,7 +448,6 @@ Glutamate-2 = Glutamate-2
 Phthalate-2 = Phthalate-2
         log_k   0
         delta_h 0       kcal
-SOLUTION_SPECIES
 H2O = OH- + H+
         log_k   -13.998
         delta_h 13.345  kcal

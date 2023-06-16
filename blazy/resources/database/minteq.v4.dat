@@ -273,7 +273,6 @@ Glutamate-2 = Glutamate-2
 	log_k 0
 Phthalate-2 = Phthalate-2
 	log_k 0
-SOLUTION_SPECIES
 Fe+3 + e- = Fe+2
 	log_k	13.032
 	delta_h	-42.7	kJ
