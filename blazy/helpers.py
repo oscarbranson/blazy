@@ -1,7 +1,7 @@
 import os
 from glob import glob
 import pandas as pd
-import pkg_resources as pkgrs
+from importlib import resources
 
 def issubset(target, reference):
     """
@@ -13,12 +13,16 @@ def issubset(target, reference):
 
 def load_reference_data(file=None):
     if file is None:
-        file = pkgrs.resource_filename('blazy', os.path.join('resources', 'test_data', 'SolutionKs.csv'))
+        # Use importlib.resources to access package resources
+        with resources.as_file(resources.files('blazy').joinpath('resources', 'test_data', 'SolutionKs.csv')) as f:
+            file = str(f)
     
     return pd.read_csv(file, comment='#')
 
 def list_databases(show_headers=True, silent=False):
-    dbases = glob(pkgrs.resource_filename('blazy', os.path.join('resources', 'database', '*.dat')))
+    # Use importlib.resources to access package resources
+    with resources.as_file(resources.files('blazy').joinpath('resources', 'database')) as db_dir:
+        dbases = glob(os.path.join(str(db_dir), '*.dat'))
 
     if not silent:
         for d in sorted(dbases):
