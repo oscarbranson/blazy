@@ -1,0 +1,9 @@
+numpy
+pandas
+matplotlib
+uncertainties
+scikit-learn
+scipy
+configparser
+tqdm
+phreeqpy
