@@ -1,4 +1,4 @@
-__version__ = '0.0.2a'
+__version__ = version = VERSION = '0.0.2-dev'
 
 from .phreeqc import iphreeqc, datParser
 from .helpers import load_reference_data, list_databases
