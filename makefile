@@ -1,7 +1,7 @@
 .PHONY: test build upload distribute
 
 test:
-	python setup.py test
+	python -m unittest discover tests
 
 build:
 	python setup.py sdist bdist_wheel

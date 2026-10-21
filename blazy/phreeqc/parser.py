@@ -8,7 +8,6 @@ import itertools
 import warnings
 import pandas as pd
 from glob import glob
-import pkg_resources as pkgrs
 
 from ..helpers import issubset, get_database_header
 from ..chemistry import get_elements, valid_elements
@@ -119,12 +118,12 @@ class datParser:
         else:
             database = database.replace('.dat', '')
         
-        dbase_path = pkgrs.resource_filename('blazy', os.path.join('resources','database'))
+        dbase_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'resources', 'database')
         valid_dbases = glob(os.path.join(dbase_path, '*.dat'))
         dbase_names = sorted([os.path.basename(d).split('.')[0] for d in valid_dbases])
 
         if database in dbase_names:
-            return pkgrs.resource_filename('blazy', os.path.join('resources','database', database.replace('.dat','') + '.dat'))
+            return os.path.join(dbase_path, database + '.dat')
         
         raise ValueError(f"The database '{database}' does not exist. Please provide a complete path to a PHREEQC database, or use one of: [{', '.join(dbase_names)}]")
     

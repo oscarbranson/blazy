@@ -1,4 +1,4 @@
-VERSION = '0.0.2a'
+VERSION = '0.0.3a'
 
 from .phreeqc import iphreeqc, datParser
 from .helpers import load_reference_data, list_databases

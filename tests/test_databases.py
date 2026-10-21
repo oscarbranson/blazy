@@ -1,15 +1,17 @@
 import os
 import unittest
 from glob import glob
-import pkg_resources as pkgrs
 
+import blazy
 from blazy.phreeqc.parser import datParser
+
+database_dir = os.path.join(os.path.dirname(blazy.__file__), 'resources', 'database')
 
 class TestDatabaseInteraction(unittest.TestCase):
 
     def test_file_paths(self):
         # where the datatbase should be
-        dbase_path = pkgrs.resource_filename('blazy', os.path.join('resources', 'database', 'pitzer.dat'))
+        dbase_path = os.path.join(database_dir, 'pitzer.dat')
 
         # where the database is
         db = datParser(database='pitzer')
@@ -22,8 +24,7 @@ class TestDatabaseInteraction(unittest.TestCase):
         self.assertEqual(db.path, dbase_path)
 
     def test_all_databases(self):
-        dbase_path = pkgrs.resource_filename('blazy', os.path.join('resources', 'database'))
-        databases = glob(os.path.join(dbase_path, '*.dat'))
+        databases = glob(os.path.join(database_dir, '*.dat'))
         print()
 
         for d in databases:
