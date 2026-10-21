@@ -7,7 +7,6 @@ import re
 import platform
 import numpy as np
 import pandas as pd
-import pkg_resources as pkgrs
 from . import parser
 
 import phreeqpy.iphreeqc.phreeqc_dll as phreeqc_mod
@@ -30,7 +29,7 @@ default_output = """SELECTED_OUTPUT
     """ 
 
 def get_database_path(database_name='pitzer'):
-    database_dir = os.path.join(pkgrs.resource_filename('blazy', 'resources'), 'database')
+    database_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'resources', 'database')
     return os.path.join(database_dir, database_name.replace('.dat', '') + '.dat')
 
 def make_solution(inputs, n=1):
